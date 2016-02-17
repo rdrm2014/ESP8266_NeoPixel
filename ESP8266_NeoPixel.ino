@@ -1,16 +1,33 @@
 // Import required libraries
 #include <ESP8266WiFi.h>
 #include <aREST.h>
+#include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+  #include <avr/power.h>
+#endif
+
+// NeoPixel Configuration
+#define NPixeis 1
+#define PIN 2
+
+// Parameter 1 = number of pixels in strip
+// Parameter 2 = Arduino pin number (most are valid)
+// Parameter 3 = pixel type flags, add together as needed:
+//   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
+//   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
+//   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
+//   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NPixeis, PIN, NEO_GRB + NEO_KHZ800);
+
+// The port to listen for incoming TCP connections
+#define LISTEN_PORT           80
 
 // Create aREST instance
 aREST rest = aREST();
 
 // WiFi parameters
-const char* ssid = "your_wifi_network_name";
-const char* password = "your_wifi_network_password";
-
-// The port to listen for incoming TCP connections
-#define LISTEN_PORT           80
+const char* ssid = "ESPap";
+const char* password = "123456789";
 
 // Create an instance of the server
 WiFiServer server(LISTEN_PORT);
@@ -74,7 +91,15 @@ int ledControl(String command) {
 
   // Get state from command
   int state = command.toInt();
-
-  digitalWrite(6,state);
+  colorWipe(strip.Color(255, 0, 0), 0);
+  digitalWrite(13,state);
   return 1;
+}
+
+void colorWipe(uint32_t c, uint8_t wait) {
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    strip.setPixelColor(i, c);
+    strip.show();
+    delay(wait);
+  }
 }
