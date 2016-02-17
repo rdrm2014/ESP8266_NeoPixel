@@ -36,8 +36,18 @@ WiFiServer server(LISTEN_PORT);
 int temperature;
 int humidity;
 
+int colorR = 0;
+int colorG = 0;
+int colorB = 0;
+
+int delayTime = 0;
+
 // Declare functions to be exposed to the API
 int ledControl(String command);
+
+int colorRControl(String command);
+int colorGControl(String command);
+int colorBControl(String command);
 
 void setup(void)
 {
@@ -52,6 +62,10 @@ void setup(void)
 
   // Function to be exposed
   rest.function("led",ledControl);
+
+  rest.function("colorR",colorRControl);
+  rest.function("colorG",colorGControl);
+  rest.function("colorB",colorBControl);
 
   // Give name and ID to device
   rest.set_id("1");
@@ -91,8 +105,31 @@ int ledControl(String command) {
 
   // Get state from command
   int state = command.toInt();
-  colorWipe(strip.Color(255, 0, 0), 0);
   digitalWrite(13,state);
+  return 1;
+}
+
+// Custom function accessible by the API
+int colorRControl(String command) {
+  // Get state from command
+  colorR = command.toInt();
+  colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
+  return 1;
+}
+
+// Custom function accessible by the API
+int colorGControl(String command) {
+  // Get state from command
+  colorG = command.toInt();
+  colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
+  return 1;
+}
+
+// Custom function accessible by the API
+int colorBControl(String command) {
+  // Get state from command
+  colorB = command.toInt();
+  colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
   return 1;
 }
 
