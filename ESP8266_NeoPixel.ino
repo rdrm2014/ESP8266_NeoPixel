@@ -7,8 +7,9 @@
 #endif
 
 // NeoPixel Configuration
-#define NPixeis 1
-#define PIN 2
+#define NPixeis 8
+#define PIRPin 0
+#define NPixeisPin 2
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -17,7 +18,7 @@
 //   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NPixeis, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NPixeis, NPixeisPin, NEO_GRB + NEO_KHZ800);
 
 // The port to listen for incoming TCP connections
 #define LISTEN_PORT           80
@@ -41,7 +42,7 @@ int colorG = 0;
 int colorB = 0;
 int colorModeId = 0;
 
-int delayTime = 0;
+int delayTime = 50;
 
 
 // Declare functions to be exposed to the API
@@ -52,10 +53,20 @@ int colorGControl(String command);
 int colorBControl(String command);
 int colorRGBControl(String command);
 
-void setup(void)
+void setup()
 {
+  #if defined (__AVR_ATtiny85__)
+    if (F_CPU == 16000000) clock_prescale_set(clock_div_1);
+  #endif
+  // End of trinket special code
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
+  
   // Start Serial
   Serial.begin(115200);
+
+  pinMode(PIRPin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(PIRPin), sensorPIR, RISING);
 
   // Init variables and expose them to REST API
   temperature = 24;
@@ -66,10 +77,13 @@ void setup(void)
   // Function to be exposed
   rest.function("led",ledControl);
 
+  rest.function("teste",teste);
+  
   rest.function("colorR",colorRControl);
   rest.function("colorG",colorGControl);
   rest.function("colorB",colorBControl);
   rest.function("colorRGB",colorRGBControl);
+  rest.function("colorMode",colorMode);
 
   // Give name and ID to device
   rest.set_id("1");
@@ -90,8 +104,12 @@ void setup(void)
   Serial.println(myIP);
 }
 
-void loop() {
+void sensorPIR() {
+    colorWipe(strip.Color(255, 255, 255), 1000);
+    Serial.println("sensorPIR");
+}
 
+void loop() {  
   // Handle REST calls
   WiFiClient client = server.available();
   if (!client) {
@@ -102,7 +120,21 @@ void loop() {
   }
   rest.handle(client);
 
+  Serial.println("Teste->");
+  Serial.print("colorR: ");
+  Serial.print(colorR);
+  Serial.print(" colorG: ");
+  Serial.print(colorG);
+  Serial.print(" colorB: ");
+  Serial.print(colorG);
+  Serial.print(" colorMode: ");
+  Serial.print(colorModeId);
+  Serial.println("<-Teste");
   switch(colorModeId){
+    case 0:
+      Serial.println("Teste case0");
+      colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
+      break;
     case 1:
       rainbow(delayTime);
       break;
@@ -117,7 +149,8 @@ void loop() {
 
 // Custom function accessible by the API
 int ledControl(String command) {
-
+  Serial.println("Teste led");
+  Serial.println(command);
   // Get state from command
   int state = command.toInt();
   digitalWrite(13,state);
@@ -125,10 +158,17 @@ int ledControl(String command) {
 }
 
 // Custom function accessible by the API
+int teste(String params) {
+  colorWipe(strip.Color(0, 255, 0), 50);
+  return 2;
+}
+
+// Custom function accessible by the API
 int colorRControl(String command) {
   // Get state from command
   colorR = command.toInt();
-  colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
+  colorModeId = 0;
+  //colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
   return 1;
 }
 
@@ -136,7 +176,8 @@ int colorRControl(String command) {
 int colorGControl(String command) {
   // Get state from command
   colorG = command.toInt();
-  colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
+  colorModeId = 0;
+  //colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
   return 1;
 }
 
@@ -144,8 +185,9 @@ int colorGControl(String command) {
 int colorBControl(String command) {
   // Get state from command
   colorB = command.toInt();
-  colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
-  return 1;
+  colorModeId = 0;
+  //colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
+  return colorB;
 }
 
 // Custom function accessible by the API
@@ -154,7 +196,8 @@ int colorRGBControl(String command) {
   colorR = command.toInt();
   colorG = command.toInt();
   colorB = command.toInt();
-  colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
+  colorModeId = 0;
+  //colorWipe(strip.Color(colorR, colorG, colorB), delayTime);
   return 1;
 }
 
@@ -162,7 +205,7 @@ int colorRGBControl(String command) {
 int colorMode(String command) {
   // Get state from command
   colorModeId = command.toInt();  
-  return 1;
+  return colorModeId;
 }
 
 void colorWipe(uint32_t c, uint8_t wait) {
